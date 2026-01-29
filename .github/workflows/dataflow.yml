@@ -259,7 +259,6 @@ jobs:
             --dead_letter_bucket=${DEAD_LETTER_BUCKET} \
             --temp_location=gs://${DATAFLOW_BUCKET}/temp \
             --staging_location=gs://${DATAFLOW_BUCKET}/staging \
-            --service_account_email=${{ env.SERVICE_ACCOUNT }} \
             --job_name=csv-to-bq-dev-${{ github.run_number }} \
             --max_num_workers=5 \
             --experiments=use_runner_v2 \
@@ -338,7 +337,6 @@ jobs:
             --dead_letter_bucket=${DEAD_LETTER_BUCKET} \
             --temp_location=gs://${DATAFLOW_BUCKET}/temp \
             --staging_location=gs://${DATAFLOW_BUCKET}/staging \
-            --service_account_email=${{ env.SERVICE_ACCOUNT }} \
             --job_name=csv-to-bq-staging-${{ github.run_number }} \
             --max_num_workers=10 \
             --experiments=use_runner_v2
@@ -408,7 +406,6 @@ jobs:
             --dead_letter_bucket=${DEAD_LETTER_BUCKET} \
             --temp_location=gs://${DATAFLOW_BUCKET}/temp \
             --staging_location=gs://${DATAFLOW_BUCKET}/staging \
-            --service_account_email=${{ env.SERVICE_ACCOUNT }} \
             --job_name=csv-to-bq-prod-${{ github.run_number }} \
             --max_num_workers=20 \
             --experiments=use_runner_v2 \
