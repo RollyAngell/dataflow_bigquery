@@ -29,7 +29,7 @@ def load_schema_from_json(schema_path: str) -> List[Dict[str, Any]]:
         return DEFAULT_SCHEMA
 
     with open(path, "r", encoding="utf-8") as f:
-        schema = json.load(f)
+        schema: List[Dict[str, Any]] = json.load(f)
 
     logger.info(f"Loaded schema with {len(schema)} fields from {schema_path}")
     return schema

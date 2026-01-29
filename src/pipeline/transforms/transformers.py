@@ -24,7 +24,7 @@ class TransformRecord(beam.DoFn):
 
     def process(self, record: Dict[str, Any]) -> Iterable[Dict[str, Any]]:
         try:
-            transformed = {}
+            transformed: Dict[str, Any] = {}
 
             for field, value in record.items():
                 if value is None:
