@@ -9,8 +9,8 @@ from apache_beam.options.pipeline_options import PipelineOptions, SetupOptions
 
 from pipeline.options import DataflowBatchOptions
 from pipeline.transforms.readers import ReadCSVFromGCS
-from pipeline.transforms.validators import ValidateRecords, VALID_TAG, INVALID_TAG
 from pipeline.transforms.transformers import TransformRecords
+from pipeline.transforms.validators import INVALID_TAG, VALID_TAG, ValidateRecords
 from pipeline.transforms.writers import WriteToBigQuery, WriteToDeadLetter
 from pipeline.utils.logging_utils import setup_logging
 from pipeline.utils.schema import get_field_types, get_required_fields
