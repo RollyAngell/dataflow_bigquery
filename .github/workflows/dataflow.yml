@@ -259,6 +259,7 @@ jobs:
             --dead_letter_bucket=${DEAD_LETTER_BUCKET} \
             --temp_location=gs://${DATAFLOW_BUCKET}/temp \
             --staging_location=gs://${DATAFLOW_BUCKET}/staging \
+            --service_account_email=dataflow-sa@dataflow-pipeline-dev.iam.gserviceaccount.com \
             --job_name=csv-to-bq-dev-${{ github.run_number }} \
             --max_num_workers=5 \
             --experiments=use_runner_v2 \
