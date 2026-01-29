@@ -28,6 +28,23 @@ DEFAULT_HEADERS = [
 ]
 
 
+def validate_required_options(options: DataflowBatchOptions) -> None:
+    """Validate that all required pipeline options are provided."""
+    required = {
+        "input_bucket": options.input_bucket,
+        "input_file": options.input_file,
+        "output_dataset": options.output_dataset,
+        "output_table": options.output_table,
+        "dead_letter_bucket": options.dead_letter_bucket,
+    }
+    missing = [name for name, value in required.items() if not value]
+    if missing:
+        raise ValueError(
+            f"Missing required pipeline options: {', '.join(missing)}. "
+            f"Please provide: {', '.join(f'--{opt}' for opt in missing)}"
+        )
+
+
 def run(argv: Optional[List[str]] = None, save_main_session: bool = True) -> None:
     """Run the batch pipeline."""
     setup_logging(level=logging.INFO)
@@ -38,6 +55,9 @@ def run(argv: Optional[List[str]] = None, save_main_session: bool = True) -> Non
 
     pipeline_options = PipelineOptions(pipeline_args)
     custom_options = pipeline_options.view_as(DataflowBatchOptions)
+
+    # Validate required options at runtime
+    validate_required_options(custom_options)
     pipeline_options.view_as(SetupOptions).save_main_session = save_main_session
 
     logger.info(f"Input: {custom_options.get_input_path()}")

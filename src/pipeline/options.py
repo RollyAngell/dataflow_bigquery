@@ -4,7 +4,11 @@ from apache_beam.options.pipeline_options import PipelineOptions
 
 
 class DataflowBatchOptions(PipelineOptions):
-    """Custom pipeline options for the CSV to BigQuery batch pipeline."""
+    """Custom pipeline options for the CSV to BigQuery batch pipeline.
+
+    Note: Arguments are not marked as required=True to allow TestPipeline
+    to work in unit tests. Validation is done at runtime in main.py.
+    """
 
     @classmethod
     def _add_argparse_args(cls, parser):
@@ -12,14 +16,14 @@ class DataflowBatchOptions(PipelineOptions):
         parser.add_argument(
             "--input_bucket",
             type=str,
-            required=True,
-            help="GCS bucket name containing input CSV files",
+            default=None,
+            help="GCS bucket name containing input CSV files (required)",
         )
         parser.add_argument(
             "--input_file",
             type=str,
-            required=True,
-            help="Path to the input CSV file within the bucket",
+            default=None,
+            help="Path to the input CSV file within the bucket (required)",
         )
         parser.add_argument(
             "--delimiter",
@@ -38,27 +42,28 @@ class DataflowBatchOptions(PipelineOptions):
         parser.add_argument(
             "--output_project",
             type=str,
+            default=None,
             help="GCP project for BigQuery output (defaults to pipeline project)",
         )
         parser.add_argument(
             "--output_dataset",
             type=str,
-            required=True,
-            help="BigQuery dataset name for output table",
+            default=None,
+            help="BigQuery dataset name for output table (required)",
         )
         parser.add_argument(
             "--output_table",
             type=str,
-            required=True,
-            help="BigQuery table name for valid records",
+            default=None,
+            help="BigQuery table name for valid records (required)",
         )
 
         # Dead letter configuration
         parser.add_argument(
             "--dead_letter_bucket",
             type=str,
-            required=True,
-            help="GCS bucket for dead letter records",
+            default=None,
+            help="GCS bucket for dead letter records (required)",
         )
         parser.add_argument(
             "--dead_letter_prefix",
