@@ -24,7 +24,15 @@ class ParseCSVLine(beam.DoFn):
     ):
         self.headers = headers
         self.delimiter = delimiter
-        self.null_values = null_values or ["", "NULL", "null", "None", "NA", "N/A", "nan"]
+        self.null_values = null_values or [
+            "",
+            "NULL",
+            "null",
+            "None",
+            "NA",
+            "N/A",
+            "nan",
+        ]
 
     def process(self, line: str) -> Iterable[Dict[str, Any]]:
         try:

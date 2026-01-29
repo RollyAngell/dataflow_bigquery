@@ -1,14 +1,4 @@
-"""Main entry point for the Dataflow batch pipeline.
-
-Usage:
-    python -m pipeline.main \
-        --input_bucket=my-bucket \
-        --input_file=data/input.csv \
-        --output_dataset=my_dataset \
-        --output_table=my_table \
-        --dead_letter_bucket=my-dead-letter-bucket \
-        --runner=DirectRunner
-"""
+"""Main entry point for the Dataflow batch pipeline."""
 
 import argparse
 import logging
@@ -56,7 +46,9 @@ def run(argv: Optional[List[str]] = None, save_main_session: bool = True) -> Non
 
     schema_path = custom_options.schema_file
     field_types = get_field_types(schema_path)
-    required_fields = [f for f in get_required_fields(schema_path) if not f.startswith("_")]
+    required_fields = [
+        f for f in get_required_fields(schema_path) if not f.startswith("_")
+    ]
 
     with beam.Pipeline(options=pipeline_options) as pipeline:
         # Step 1: Read CSV from GCS

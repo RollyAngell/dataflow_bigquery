@@ -80,7 +80,9 @@ class ValidateRecord(beam.DoFn):
             PipelineMetrics.increment_valid()
             yield pvalue.TaggedOutput(VALID_TAG, record)
 
-    def _validate_type(self, field: str, value: Any, expected_type: str) -> Optional[str]:
+    def _validate_type(
+        self, field: str, value: Any, expected_type: str
+    ) -> Optional[str]:
         try:
             if expected_type == "INTEGER":
                 int(value)

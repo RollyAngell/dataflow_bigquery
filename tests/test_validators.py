@@ -1,6 +1,11 @@
 """Unit tests for the validators module."""
 
-from pipeline.transforms.validators import ValidateRecord, ValidateRecords, VALID_TAG, INVALID_TAG
+from pipeline.transforms.validators import (
+    INVALID_TAG,
+    VALID_TAG,
+    ValidateRecord,
+    ValidateRecords,
+)
 
 
 class TestValidateRecord:

@@ -7,7 +7,10 @@ from typing import Any, Dict, Iterable, Optional
 
 import apache_beam as beam
 from apache_beam.io import WriteToText
-from apache_beam.io.gcp.bigquery import BigQueryDisposition, WriteToBigQuery as BeamWriteToBigQuery
+from apache_beam.io.gcp.bigquery import (
+    BigQueryDisposition,
+    WriteToBigQuery as BeamWriteToBigQuery,
+)
 
 from pipeline.utils.logging_utils import PipelineMetrics
 from pipeline.utils.schema import get_table_schema

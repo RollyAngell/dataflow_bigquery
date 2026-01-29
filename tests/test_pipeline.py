@@ -5,8 +5,8 @@ from apache_beam.testing.test_pipeline import TestPipeline
 from apache_beam.testing.util import assert_that, equal_to, is_not_empty
 
 from pipeline.transforms.readers import ParseCSVLine
-from pipeline.transforms.validators import ValidateRecords, VALID_TAG, INVALID_TAG
 from pipeline.transforms.transformers import TransformRecords
+from pipeline.transforms.validators import INVALID_TAG, VALID_TAG, ValidateRecords
 
 
 class TestParseCSVLine:
@@ -92,10 +92,16 @@ class TestPipelineIntegration:
             )
 
             def extract_data(record):
-                return {"id": record["id"], "name": record["name"], "amount": record["amount"]}
+                return {
+                    "id": record["id"],
+                    "name": record["name"],
+                    "amount": record["amount"],
+                }
 
             data_only = transformed | beam.Map(extract_data)
-            assert_that(data_only, equal_to([{"id": 123, "name": "John", "amount": 99.99}]))
+            assert_that(
+                data_only, equal_to([{"id": 123, "name": "John", "amount": 99.99}])
+            )
 
     def test_mixed_records_flow(self):
         with TestPipeline() as p:
