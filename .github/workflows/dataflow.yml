@@ -1,0 +1,416 @@
+# CI/CD Pipeline for Dataflow BigQuery Batch Pipeline
+# This workflow runs linting, tests, validates the pipeline, and deploys to Dataflow
+
+name: Dataflow Pipeline CI/CD
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'schemas/**'
+      - 'requirements*.txt'
+      - '.github/workflows/dataflow.yml'
+  pull_request:
+    branches:
+      - main
+      - develop
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+
+env:
+  PYTHON_VERSION: '3.11'
+  # GCP Configuration - These should match your project
+  GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+  GCP_REGION: ${{ vars.GCP_REGION || 'us-central1' }}
+  # Workload Identity Federation
+  WORKLOAD_IDENTITY_PROVIDER: ${{ vars.WORKLOAD_IDENTITY_PROVIDER }}
+  SERVICE_ACCOUNT: ${{ vars.SERVICE_ACCOUNT }}
+
+jobs:
+  # ====================
+  # Lint Job
+  # ====================
+  lint:
+    name: Code Quality Checks
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Run flake8 (linting)
+        run: |
+          flake8 src/ tests/ --count --show-source --statistics
+
+      - name: Run black (formatting check)
+        run: |
+          black --check --diff src/ tests/
+
+      - name: Run isort (import sorting check)
+        run: |
+          isort --check-only --diff src/ tests/
+
+      - name: Run mypy (type checking)
+        run: |
+          mypy src/ --ignore-missing-imports
+        continue-on-error: true
+
+  # ====================
+  # Test Job
+  # ====================
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    needs: lint
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+          pip install -e .
+
+      - name: Run tests with coverage
+        run: |
+          pytest tests/ \
+            --cov=src \
+            --cov-report=xml \
+            --cov-report=term-missing \
+            --junitxml=test-results.xml \
+            -v
+
+      - name: Upload coverage report
+        uses: codecov/codecov-action@v4
+        with:
+          file: coverage.xml
+          flags: unittests
+          fail_ci_if_error: false
+        continue-on-error: true
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: test-results.xml
+
+  # ====================
+  # Validate Pipeline Job
+  # ====================
+  validate:
+    name: Validate Pipeline
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -e .
+
+      - name: Validate pipeline (dry-run)
+        run: |
+          # Run pipeline in dry-run mode to validate configuration
+          python -c "
+          from pipeline.main import run
+          from pipeline.options import DataflowBatchOptions
+          from apache_beam.options.pipeline_options import PipelineOptions
+          
+          # Validate options parsing
+          options = PipelineOptions([
+              '--input_bucket=test-bucket',
+              '--input_file=test/input.csv',
+              '--output_dataset=test_dataset',
+              '--output_table=test_table',
+              '--dead_letter_bucket=test-dead-letter',
+              '--runner=DirectRunner',
+          ])
+          custom = options.view_as(DataflowBatchOptions)
+          
+          # Verify all required options are parsed
+          assert custom.input_bucket == 'test-bucket'
+          assert custom.output_dataset == 'test_dataset'
+          print('Pipeline configuration validation passed!')
+          "
+
+      - name: Validate BigQuery schema
+        run: |
+          python -c "
+          import json
+          from pipeline.utils.schema import load_schema_from_json, get_bigquery_schema
+          
+          # Load and validate schema
+          schema = load_schema_from_json('schemas/bigquery_schema.json')
+          assert len(schema) > 0, 'Schema should have fields'
+          
+          # Check required fields exist
+          field_names = [f['name'] for f in schema]
+          assert 'id' in field_names, 'Schema should have id field'
+          assert '_load_timestamp' in field_names, 'Schema should have audit timestamp'
+          
+          print(f'Schema validation passed! {len(schema)} fields defined.')
+          "
+
+  # ====================
+  # Deploy Job (Dev)
+  # ====================
+  deploy-dev:
+    name: Deploy to Dev
+    runs-on: ubuntu-latest
+    needs: validate
+    if: github.ref == 'refs/heads/develop' || github.event.inputs.environment == 'dev'
+    environment: dev
+    
+    permissions:
+      contents: read
+      id-token: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -e .
+
+      # Authenticate using Workload Identity Federation (no service account keys)
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ env.SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.GCP_PROJECT_ID }}
+
+      - name: Deploy Dataflow Job
+        env:
+          ENVIRONMENT: dev
+          INPUT_BUCKET: ${{ vars.INPUT_BUCKET_DEV }}
+          INPUT_FILE: ${{ vars.INPUT_FILE }}
+          OUTPUT_DATASET: ${{ vars.BQ_DATASET_DEV }}
+          OUTPUT_TABLE: ${{ vars.BQ_TABLE }}
+          DEAD_LETTER_BUCKET: ${{ vars.DEAD_LETTER_BUCKET_DEV }}
+          DATAFLOW_BUCKET: ${{ vars.DATAFLOW_BUCKET_DEV }}
+        run: |
+          echo "Deploying Dataflow job to DEV environment..."
+          
+          python -m pipeline.main \
+            --runner=DataflowRunner \
+            --project=${{ env.GCP_PROJECT_ID }} \
+            --region=${{ env.GCP_REGION }} \
+            --input_bucket=${INPUT_BUCKET} \
+            --input_file=${INPUT_FILE} \
+            --output_dataset=${OUTPUT_DATASET} \
+            --output_table=${OUTPUT_TABLE} \
+            --dead_letter_bucket=${DEAD_LETTER_BUCKET} \
+            --temp_location=gs://${DATAFLOW_BUCKET}/temp \
+            --staging_location=gs://${DATAFLOW_BUCKET}/staging \
+            --service_account_email=${{ env.SERVICE_ACCOUNT }} \
+            --job_name=csv-to-bq-dev-${{ github.run_number }} \
+            --max_num_workers=5 \
+            --experiments=use_runner_v2 \
+            --sdk_container_image=gcr.io/dataflow-templates-base/python311-template-launcher-base:latest
+
+      - name: Report deployment status
+        if: always()
+        run: |
+          echo "Deployment completed for DEV environment"
+          echo "Job Name: csv-to-bq-dev-${{ github.run_number }}"
+          echo "Project: ${{ env.GCP_PROJECT_ID }}"
+          echo "Region: ${{ env.GCP_REGION }}"
+
+  # ====================
+  # Deploy Job (Staging) - Manual approval required
+  # ====================
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: deploy-dev
+    if: github.ref == 'refs/heads/main' || github.event.inputs.environment == 'staging'
+    environment: staging
+    
+    permissions:
+      contents: read
+      id-token: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -e .
+
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ env.SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.GCP_PROJECT_ID }}
+
+      - name: Deploy Dataflow Job to Staging
+        env:
+          ENVIRONMENT: staging
+          INPUT_BUCKET: ${{ vars.INPUT_BUCKET_STAGING }}
+          INPUT_FILE: ${{ vars.INPUT_FILE }}
+          OUTPUT_DATASET: ${{ vars.BQ_DATASET_STAGING }}
+          OUTPUT_TABLE: ${{ vars.BQ_TABLE }}
+          DEAD_LETTER_BUCKET: ${{ vars.DEAD_LETTER_BUCKET_STAGING }}
+          DATAFLOW_BUCKET: ${{ vars.DATAFLOW_BUCKET_STAGING }}
+        run: |
+          echo "Deploying Dataflow job to STAGING environment..."
+          
+          python -m pipeline.main \
+            --runner=DataflowRunner \
+            --project=${{ env.GCP_PROJECT_ID }} \
+            --region=${{ env.GCP_REGION }} \
+            --input_bucket=${INPUT_BUCKET} \
+            --input_file=${INPUT_FILE} \
+            --output_dataset=${OUTPUT_DATASET} \
+            --output_table=${OUTPUT_TABLE} \
+            --dead_letter_bucket=${DEAD_LETTER_BUCKET} \
+            --temp_location=gs://${DATAFLOW_BUCKET}/temp \
+            --staging_location=gs://${DATAFLOW_BUCKET}/staging \
+            --service_account_email=${{ env.SERVICE_ACCOUNT }} \
+            --job_name=csv-to-bq-staging-${{ github.run_number }} \
+            --max_num_workers=10 \
+            --experiments=use_runner_v2
+
+  # ====================
+  # Deploy Job (Production) - Manual approval required
+  # ====================
+  deploy-prod:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: deploy-staging
+    if: github.event.inputs.environment == 'prod'
+    environment: production
+    
+    permissions:
+      contents: read
+      id-token: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -e .
+
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ env.SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.GCP_PROJECT_ID }}
+
+      - name: Deploy Dataflow Job to Production
+        env:
+          ENVIRONMENT: prod
+          INPUT_BUCKET: ${{ vars.INPUT_BUCKET_PROD }}
+          INPUT_FILE: ${{ vars.INPUT_FILE }}
+          OUTPUT_DATASET: ${{ vars.BQ_DATASET_PROD }}
+          OUTPUT_TABLE: ${{ vars.BQ_TABLE }}
+          DEAD_LETTER_BUCKET: ${{ vars.DEAD_LETTER_BUCKET_PROD }}
+          DATAFLOW_BUCKET: ${{ vars.DATAFLOW_BUCKET_PROD }}
+        run: |
+          echo "Deploying Dataflow job to PRODUCTION environment..."
+          
+          python -m pipeline.main \
+            --runner=DataflowRunner \
+            --project=${{ env.GCP_PROJECT_ID }} \
+            --region=${{ env.GCP_REGION }} \
+            --input_bucket=${INPUT_BUCKET} \
+            --input_file=${INPUT_FILE} \
+            --output_dataset=${OUTPUT_DATASET} \
+            --output_table=${OUTPUT_TABLE} \
+            --dead_letter_bucket=${DEAD_LETTER_BUCKET} \
+            --temp_location=gs://${DATAFLOW_BUCKET}/temp \
+            --staging_location=gs://${DATAFLOW_BUCKET}/staging \
+            --service_account_email=${{ env.SERVICE_ACCOUNT }} \
+            --job_name=csv-to-bq-prod-${{ github.run_number }} \
+            --max_num_workers=20 \
+            --experiments=use_runner_v2 \
+            --use_public_ips=false

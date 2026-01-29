@@ -1,0 +1,11 @@
+id,name,email,amount,created_at,is_active,category
+1,John Doe,john.doe@example.com,150.50,2024-01-15 10:30:00,true,premium
+2,Jane Smith,jane.smith@example.com,275.00,2024-01-16 14:45:00,true,standard
+3,Bob Johnson,bob.johnson@example.com,50.25,2024-01-17 09:15:00,false,basic
+4,Alice Brown,alice.brown@example.com,1200.00,2024-01-18 16:20:00,true,premium
+5,Charlie Wilson,charlie.wilson@example.com,89.99,2024-01-19 11:00:00,true,standard
+6,Diana Martinez,diana.martinez@example.com,NULL,2024-01-20 13:30:00,false,basic
+7,Edward Lee,edward.lee@example.com,450.75,2024-01-21 08:45:00,true,premium
+8,Fiona Garcia,fiona.garcia@example.com,125.00,,true,standard
+9,George Taylor,george.taylor@example.com,999.99,2024-01-23 17:00:00,true,premium
+10,Hannah Anderson,hannah.anderson@example.com,75.50,2024-01-24 12:15:00,false,basic

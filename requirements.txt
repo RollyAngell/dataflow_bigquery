@@ -1,0 +1,16 @@
+# Apache Beam with GCP extras
+apache-beam[gcp]==2.52.0
+
+# Google Cloud libraries
+google-cloud-bigquery==3.14.1
+google-cloud-storage==2.14.0
+
+# Data processing
+pandas==2.1.4
+pyarrow==14.0.2
+
+# Configuration
+python-dotenv==1.0.0
+
+# Logging
+google-cloud-logging==3.9.0

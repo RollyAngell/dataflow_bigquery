@@ -1,0 +1,56 @@
+[
+  {
+    "name": "id",
+    "type": "INTEGER",
+    "mode": "REQUIRED",
+    "description": "Unique identifier for the record"
+  },
+  {
+    "name": "name",
+    "type": "STRING",
+    "mode": "REQUIRED",
+    "description": "Full name of the entity"
+  },
+  {
+    "name": "email",
+    "type": "STRING",
+    "mode": "REQUIRED",
+    "description": "Email address"
+  },
+  {
+    "name": "amount",
+    "type": "FLOAT",
+    "mode": "NULLABLE",
+    "description": "Transaction or monetary amount"
+  },
+  {
+    "name": "created_at",
+    "type": "TIMESTAMP",
+    "mode": "NULLABLE",
+    "description": "Original creation timestamp"
+  },
+  {
+    "name": "is_active",
+    "type": "BOOLEAN",
+    "mode": "NULLABLE",
+    "description": "Active status flag"
+  },
+  {
+    "name": "category",
+    "type": "STRING",
+    "mode": "NULLABLE",
+    "description": "Category or classification"
+  },
+  {
+    "name": "_load_timestamp",
+    "type": "TIMESTAMP",
+    "mode": "REQUIRED",
+    "description": "Timestamp when the record was loaded by the pipeline"
+  },
+  {
+    "name": "_source_file",
+    "type": "STRING",
+    "mode": "REQUIRED",
+    "description": "Source file path from GCS"
+  }
+]
