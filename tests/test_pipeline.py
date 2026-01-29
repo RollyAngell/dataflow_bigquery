@@ -1,6 +1,7 @@
 """Integration tests for the pipeline."""
 
 import apache_beam as beam
+from apache_beam.options.pipeline_options import PipelineOptions
 from apache_beam.testing.test_pipeline import TestPipeline
 from apache_beam.testing.util import assert_that, equal_to, is_not_empty
 
@@ -50,7 +51,7 @@ class TestPipelineIntegration:
     """Integration tests using Beam TestPipeline."""
 
     def test_validate_valid_records(self):
-        with TestPipeline() as p:
+        with TestPipeline(options=PipelineOptions([])) as p:
             input_records = [
                 {"id": "1", "name": "John", "email": "john@test.com"},
                 {"id": "2", "name": "Jane", "email": "jane@test.com"},
@@ -64,7 +65,7 @@ class TestPipelineIntegration:
             assert_that(valid, equal_to(input_records))
 
     def test_invalid_records_to_dead_letter(self):
-        with TestPipeline() as p:
+        with TestPipeline(options=PipelineOptions([])) as p:
             input_records = [
                 {"id": "1", "name": "John", "email": "john@test.com"},
                 {"id": "2", "name": None, "email": "jane@test.com"},
@@ -79,11 +80,12 @@ class TestPipelineIntegration:
             assert_that(
                 valid,
                 equal_to([{"id": "1", "name": "John", "email": "john@test.com"}]),
+                label="ValidRecords",
             )
-            assert_that(invalid, is_not_empty())
+            assert_that(invalid, is_not_empty(), label="InvalidRecords")
 
     def test_transform_converts_types(self):
-        with TestPipeline() as p:
+        with TestPipeline(options=PipelineOptions([])) as p:
             input_records = [{"id": "123", "name": "John", "amount": "99.99"}]
             records = p | beam.Create(input_records)
             transformed = records | TransformRecords(
@@ -104,7 +106,7 @@ class TestPipelineIntegration:
             )
 
     def test_mixed_records_flow(self):
-        with TestPipeline() as p:
+        with TestPipeline(options=PipelineOptions([])) as p:
             input_records = [
                 {"id": "1", "name": "Alice", "email": "alice@test.com"},
                 {"id": "2", "name": "Bob", "email": "bob@test.com"},
