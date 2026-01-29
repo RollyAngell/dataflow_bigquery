@@ -1,7 +1,5 @@
 """Unit tests for the transformers module."""
 
-import pytest
-
 from pipeline.transforms.transformers import TransformRecord, TransformRecords
 
 

@@ -1,7 +1,5 @@
 """Unit tests for the validators module."""
 
-import pytest
-
 from pipeline.transforms.validators import ValidateRecord, ValidateRecords, VALID_TAG, INVALID_TAG
 
 
