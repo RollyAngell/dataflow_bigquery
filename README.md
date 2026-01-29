@@ -1,4 +1,4 @@
-# Dataflow BigQuery Batch Pipeline #
+# Dataflow BigQuery Batch Pipeline
 
 Pipeline batch para procesar archivos CSV desde Google Cloud Storage (GCS) y cargarlos en BigQuery usando Apache Beam y Dataflow.
 
