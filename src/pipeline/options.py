@@ -1,6 +1,6 @@
 """Pipeline options for Dataflow job configuration."""
 
-from apache_beam.options.pipeline_options import PipelineOptions
+from apache_beam.options.pipeline_options import GoogleCloudOptions, PipelineOptions
 
 
 class DataflowBatchOptions(PipelineOptions):
@@ -87,5 +87,5 @@ class DataflowBatchOptions(PipelineOptions):
         return f"gs://{self.dead_letter_bucket}/{self.dead_letter_prefix}"
 
     def get_bigquery_table(self) -> str:
-        project = self.output_project or self.project
+        project = self.output_project or self.view_as(GoogleCloudOptions).project
         return f"{project}:{self.output_dataset}.{self.output_table}"
