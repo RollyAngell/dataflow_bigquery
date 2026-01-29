@@ -179,8 +179,7 @@ jobs:
       - name: Validate BigQuery schema
         run: |
           python -c "
-          import json
-          from pipeline.utils.schema import load_schema_from_json, get_bigquery_schema
+          from pipeline.utils.schema import load_schema_from_json
           
           # Load and validate schema
           schema = load_schema_from_json('schemas/bigquery_schema.json')
